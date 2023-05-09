@@ -43,7 +43,7 @@ class Bird:
         """
         self._img = pg.transform.flip(  # 左右反転
             pg.transform.rotozoom(  # 2倍に拡大
-                pg.image.load(f"ex03/fig/{num}.png"), 
+                pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png"), 
                 0, 
                 2.0), 
             True, 
@@ -58,7 +58,7 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 screen：画面Surface
         """
-        self._img = pg.transform.rotozoom(pg.image.load(f"ex03/fig/{num}.png"), 0, 2.0)
+        self._img = pg.transform.rotozoom(pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png"), 0, 2.0)
         screen.blit(self._img, self._rct)
 
     def update(self, key_lst: list[bool], screen: pg.Surface):
@@ -70,12 +70,11 @@ class Bird:
         for k, mv in __class__._delta.items():
             if key_lst[k]:
                 self._rct.move_ip(mv)
-        if check_bound(screen.get_rect(), self._rct) != (True, True):
+        if check_bound(screen.get_rect(), self._rct) != (True, True): # type: ignore
             for k, mv in __class__._delta.items():
                 if key_lst[k]:
                     self._rct.move_ip(-mv[0], -mv[1])
         screen.blit(self._img, self._rct)
-
 
 class Bomb:
     """
@@ -99,7 +98,7 @@ class Bomb:
         爆弾を速度ベクトルself._vx, self._vyに基づき移動させる
         引数 screen：画面Surface
         """
-        yoko, tate = check_bound(screen.get_rect(), self._rct)
+        yoko, tate = check_bound(screen.get_rect(), self._rct) # type: ignore
         if not yoko:
             self._vx *= -1
         if not tate:
@@ -108,33 +107,61 @@ class Bomb:
         screen.blit(self._img, self._rct)
 
 
+class Beam:
+    """
+    ビームに関するクラス
+    """
+    def __init__(self, bird:Bird):
+        self._img = pg.image.load(f"ProjExD2023/ex03-20230509/fig/beam.png")#画像surface
+        self._rct = self._img.get_rect()#画像surfaceに対応したrect
+        self._rct.centerx = bird._rct.centerx + 100#rectに座標を設定する
+        self._rct.centery = bird._rct.centery#rectに座標を設定する
+        self._dx,self._dy=1,0
+
+    def update(self,screen:pg.Surface):
+        self._rct.move_ip(self._dx,self._dy)
+        screen.blit(self._img,self._rct)
+
+        
+
+
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     clock = pg.time.Clock()
-    bg_img = pg.image.load("ex03/fig/pg_bg.jpg")
+    bg_img = pg.image.load("ProjExD2023/ex03-20230509/fig/pg_bg.jpg")
 
     bird = Bird(3, (900, 400))
     bomb = Bomb((255, 0, 0), 10)
+    beam = None
 
     tmr = 0
     while True:
         for event in pg.event.get():
             if event.type == pg.QUIT:
                 return
+            if event.type == pg.KEYDOWN and event.key == pg.K_SPACE :
+                beam = Beam(bird)
         tmr += 1
         screen.blit(bg_img, [0, 0])
         
         if bird._rct.colliderect(bomb._rct):
             # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
-            bird.change_img(8, screen)
+            bird.change_img(8, screen) # type: ignore
             pg.display.update()
             time.sleep(1)
             return
 
         key_lst = pg.key.get_pressed()
-        bird.update(key_lst, screen)
-        bomb.update(screen)
+        bird.update(key_lst, screen) # type: ignore
+        bomb.update(screen) # type: ignore
+        
+        if beam is not None:
+            beam.update(screen) # type: ignore
+            if beam._rct.colliderect(bomb._rct):# type: ignore
+                beam = None
+                bomb = Bomb((255, 0, 0), 10)
+
         pg.display.update()
         clock.tick(1000)
 
