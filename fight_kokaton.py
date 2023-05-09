@@ -193,7 +193,11 @@ class Beam:
             self._rct.centery = bird._rct.centery - 100
             self._dx,self._dy=0,-3
         else :
-            pass
+            self._img = pg.image.load(f"ex03-20230509/fig/beam.png")#画像surface
+            self._rct = self._img.get_rect()#画像surfaceに対応したrect
+            self._rct.centerx = bird._rct.centerx + 100#rectに座標を設定する
+            self._rct.centery = bird._rct.centery
+            self._dx,self._dy=3,0
     def update(self,screen:pg.Surface):
         self._rct.move_ip(self._dx,self._dy)
         screen.blit(self._img,self._rct)
