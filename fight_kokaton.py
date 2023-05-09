@@ -177,7 +177,7 @@ class Beam:
         elif bird.sum_mv[1] is +1 and bird.sum_mv[0] is not +1 and bird.sum_mv[0] is not -1:
             self._img = pg.transform.rotozoom(
                 pg.image.load(f"ex03-20230509/fig/beam.png"),
-                90,
+                -90,
                 1.0)
             self._rct = self._img.get_rect()#画像surfaceに対応したrect
             self._rct.centerx = bird._rct.centerx #rectに座標を設定する
@@ -186,7 +186,7 @@ class Beam:
         elif bird.sum_mv[1] is -1 and bird.sum_mv[0] is not +1 and bird.sum_mv[0] is not -1:
             self._img = pg.transform.rotozoom(
                 pg.image.load(f"ex03-20230509/fig/beam.png"),
-                -90,
+                90,
                 1.0)
             self._rct = self._img.get_rect()#画像surfaceに対応したrect
             self._rct.centerx = bird._rct.centerx #rectに座標を設定する
@@ -233,17 +233,18 @@ def main():
         
         if len(beams) is not 0:
             for j , beam in enumerate(beams):
-                if beam is not None:
+                if beam:
                     beam.update(screen) # type: ignore
-                    if beam._rct.centerx > 1800:
+                    if beam._rct.centerx > 1800 or beam._rct.centerx < 0 or beam._rct.centery > 900 or beam._rct.centery < 0:
                         del beams[j]
-                    for i , bomb in enumerate(bombs):
-                        if beam._rct.colliderect(bomb._rct):# type: ignore
-                            del beams[j]
-                            del bombs[i]
-                            bird.change_img(6, screen)# type: ignore
-                            time.sleep(0.1)
-                            break
+                    else:
+                        for i , bomb in enumerate(bombs):
+                            if beam._rct.colliderect(bomb._rct):# type: ignore
+                                del beams[j]
+                                del bombs[i]
+                                bird.change_img(6, screen)# type: ignore
+                                time.sleep(0.1)
+                                break
 
         pg.display.update()
         clock.tick(1000)
