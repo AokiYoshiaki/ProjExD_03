@@ -123,8 +123,6 @@ class Beam:
         screen.blit(self._img,self._rct)
 
         
-
-
 def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
@@ -161,6 +159,7 @@ def main():
             if beam._rct.colliderect(bomb._rct):# type: ignore
                 beam = None
                 bomb = Bomb((255, 0, 0), 10)
+                bird.change_img(6, screen)# type: ignore
 
         pg.display.update()
         clock.tick(1000)
