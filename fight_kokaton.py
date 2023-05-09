@@ -7,6 +7,7 @@ import pygame as pg
 
 WIDTH = 1600  # ゲームウィンドウの幅
 HEIGHT = 900  # ゲームウィンドウの高さ
+NUM_OF_BOMBS = 3
 
 
 def check_bound(area: pg.Rect, obj: pg.Rect) -> tuple[bool, bool]:
@@ -41,14 +42,51 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 xy：こうかとん画像の位置座標タプル
         """
-        self._img = pg.transform.flip(  # 左右反転
-            pg.transform.rotozoom(  # 2倍に拡大
-                pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png"), 
-                0, 
-                2.0), 
-            True, 
-            False
-        )
+        img = pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png")
+        hanntaiimg=pg.transform.flip(img,True,False)
+        self._houkou = {
+            (+1, 0): 
+            pg.transform.rotozoom(
+                hanntaiimg,
+                0,
+                2.0),
+            (+1, +1): 
+            pg.transform.rotozoom(
+                hanntaiimg,
+                -45,
+                2.0),
+            (0, +1): 
+            pg.transform.rotozoom(
+                hanntaiimg,
+                -90,
+                2.0),
+            (-1, +1): 
+            pg.transform.rotozoom(
+                img,
+                45,
+                2.0),
+            (-1, 0): 
+            pg.transform.rotozoom(
+                img,
+                0,
+                2.0),
+            (-1, -1): 
+            pg.transform.rotozoom(
+                img,
+                -45,
+                2.0),
+            (0, -1): 
+            pg.transform.rotozoom(
+                hanntaiimg,
+                90,
+                2.0),
+            (+1, -1): 
+            pg.transform.rotozoom(
+                hanntaiimg,
+                45,
+                2.0)
+            }
+        self._img = self._houkou[(+1, 0)]
         self._rct = self._img.get_rect()
         self._rct.center = xy
 
@@ -67,31 +105,40 @@ class Bird:
         引数1 key_lst：押下キーの真理値リスト
         引数2 screen：画面Surface
         """
+        sum_mv =[0, 0]
         for k, mv in __class__._delta.items():
             if key_lst[k]:
                 self._rct.move_ip(mv)
+                sum_mv[0] = mv[0]
+                sum_mv[1] += mv[1]
         if check_bound(screen.get_rect(), self._rct) != (True, True): # type: ignore
             for k, mv in __class__._delta.items():
                 if key_lst[k]:
                     self._rct.move_ip(-mv[0], -mv[1])
+        if not (sum_mv[0] == 0 and sum_mv[1] == 0):
+            self._img = self._houkou[tuple(sum_mv)] # type: ignore
         screen.blit(self._img, self._rct)
 
 class Bomb:
     """
     爆弾に関するクラス
     """
-    def __init__(self, color: tuple[int, int, int], rad: int):
+    _colors = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (255, 255, 0), (255, 0, 255), (0, 255, 255), (255, 255, 255)]
+    _dires = [-1, 0, +1]
+    def __init__(self):
         """
         引数に基づき爆弾円Surfaceを生成する
         引数1 color：爆弾円の色タプル
         引数2 rad：爆弾円の半径
         """
+        rad = random.randint(10, 40)
         self._img = pg.Surface((2*rad, 2*rad))
+        color = random.choice(Bomb._colors)
         pg.draw.circle(self._img, color, (rad, rad), rad)
         self._img.set_colorkey((0, 0, 0))
         self._rct = self._img.get_rect()
         self._rct.center = random.randint(0, WIDTH), random.randint(0, HEIGHT)
-        self._vx, self._vy = +1, +1
+        self._vx, self._vy = random.choice(Bomb._dires), random.choice(Bomb._dires)
 
     def update(self, screen: pg.Surface):
         """
@@ -130,8 +177,9 @@ def main():
     bg_img = pg.image.load("ProjExD2023/ex03-20230509/fig/pg_bg.jpg")
 
     bird = Bird(3, (900, 400))
-    bomb = Bomb((255, 0, 0), 10)
+    bombs = [Bomb() for i in range (NUM_OF_BOMBS)]
     beam = None
+
 
     tmr = 0
     while True:
@@ -143,23 +191,26 @@ def main():
         tmr += 1
         screen.blit(bg_img, [0, 0])
         
-        if bird._rct.colliderect(bomb._rct):
-            # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
-            bird.change_img(8, screen) # type: ignore
-            pg.display.update()
-            time.sleep(1)
-            return
+        for bomb in bombs:
+            bomb.update(screen) # type: ignore
+            if bird._rct.colliderect(bomb._rct): # type: ignore
+                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
+                bird.change_img(8, screen) # type: ignore
+                pg.display.update()
+                return
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen) # type: ignore
-        bomb.update(screen) # type: ignore
         
         if beam is not None:
             beam.update(screen) # type: ignore
-            if beam._rct.colliderect(bomb._rct):# type: ignore
-                beam = None
-                bomb = Bomb((255, 0, 0), 10)
-                bird.change_img(6, screen)# type: ignore
+            for i , bomb in enumerate(bombs):
+                if beam._rct.colliderect(bomb._rct):# type: ignore
+                    beam = None
+                    del bombs[i]
+                    bird.change_img(6, screen)# type: ignore
+                    time.sleep(0.1)# type: ignore
+                    break
 
         pg.display.update()
         clock.tick(1000)
