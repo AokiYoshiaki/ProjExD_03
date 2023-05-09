@@ -42,7 +42,7 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 xy：こうかとん画像の位置座標タプル
         """
-        img = pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png")
+        img = pg.image.load(f"ex03-20230509/fig/{num}.png")
         hanntaiimg=pg.transform.flip(img,True,False)
         self._houkou = {
             (+1, 0): 
@@ -96,7 +96,7 @@ class Bird:
         引数1 num：こうかとん画像ファイル名の番号
         引数2 screen：画面Surface
         """
-        self._img = pg.transform.rotozoom(pg.image.load(f"ProjExD2023/ex03-20230509/fig/{num}.png"), 0, 2.0)
+        self._img = pg.transform.rotozoom(pg.image.load(f"ex03-20230509/fig/{num}.png"), 0, 2.0)
         screen.blit(self._img, self._rct)
 
     def update(self, key_lst: list[bool], screen: pg.Surface):
@@ -105,18 +105,18 @@ class Bird:
         引数1 key_lst：押下キーの真理値リスト
         引数2 screen：画面Surface
         """
-        sum_mv =[0, 0]
+        self.sum_mv =[0, 0]
         for k, mv in __class__._delta.items():
             if key_lst[k]:
                 self._rct.move_ip(mv)
-                sum_mv[0] = mv[0]
-                sum_mv[1] += mv[1]
+                self.sum_mv[0] = mv[0]
+                self.sum_mv[1] += mv[1]
         if check_bound(screen.get_rect(), self._rct) != (True, True): # type: ignore
             for k, mv in __class__._delta.items():
                 if key_lst[k]:
                     self._rct.move_ip(-mv[0], -mv[1])
-        if not (sum_mv[0] == 0 and sum_mv[1] == 0):
-            self._img = self._houkou[tuple(sum_mv)] # type: ignore
+        if not (self.sum_mv[0] == 0 and self.sum_mv[1] == 0):
+            self._img = self._houkou[tuple(self.sum_mv)] # type: ignore
         screen.blit(self._img, self._rct)
 
 class Bomb:
@@ -159,12 +159,41 @@ class Beam:
     ビームに関するクラス
     """
     def __init__(self, bird:Bird):
-        self._img = pg.image.load(f"ProjExD2023/ex03-20230509/fig/beam.png")#画像surface
-        self._rct = self._img.get_rect()#画像surfaceに対応したrect
-        self._rct.centerx = bird._rct.centerx + 100#rectに座標を設定する
-        self._rct.centery = bird._rct.centery#rectに座標を設定する
-        self._dx,self._dy=1,0
-
+        if bird.sum_mv[0] is +1 and bird.sum_mv[1] is not +1 and bird.sum_mv[1] is not -1:
+            self._img = pg.image.load(f"ex03-20230509/fig/beam.png")#画像surface
+            self._rct = self._img.get_rect()#画像surfaceに対応したrect
+            self._rct.centerx = bird._rct.centerx + 100#rectに座標を設定する
+            self._rct.centery = bird._rct.centery
+            self._dx,self._dy=3,0
+        elif bird.sum_mv[0] is -1 and bird.sum_mv[1] is not +1 and bird.sum_mv[1] is not -1:
+            self._img = pg.transform.flip(
+                pg.image.load(f"ex03-20230509/fig/beam.png"),
+                True,
+                False)
+            self._rct = self._img.get_rect()#画像surfaceに対応したrect
+            self._rct.centerx = bird._rct.centerx - 100#rectに座標を設定する
+            self._rct.centery = bird._rct.centery
+            self._dx,self._dy=-3,0
+        elif bird.sum_mv[1] is +1 and bird.sum_mv[0] is not +1 and bird.sum_mv[0] is not -1:
+            self._img = pg.transform.rotozoom(
+                pg.image.load(f"ex03-20230509/fig/beam.png"),
+                90,
+                1.0)
+            self._rct = self._img.get_rect()#画像surfaceに対応したrect
+            self._rct.centerx = bird._rct.centerx #rectに座標を設定する
+            self._rct.centery = bird._rct.centery + 100
+            self._dx,self._dy=0,3
+        elif bird.sum_mv[1] is -1 and bird.sum_mv[0] is not +1 and bird.sum_mv[0] is not -1:
+            self._img = pg.transform.rotozoom(
+                pg.image.load(f"ex03-20230509/fig/beam.png"),
+                -90,
+                1.0)
+            self._rct = self._img.get_rect()#画像surfaceに対応したrect
+            self._rct.centerx = bird._rct.centerx #rectに座標を設定する
+            self._rct.centery = bird._rct.centery - 100
+            self._dx,self._dy=0,-3
+        else :
+            pass
     def update(self,screen:pg.Surface):
         self._rct.move_ip(self._dx,self._dy)
         screen.blit(self._img,self._rct)
@@ -174,11 +203,11 @@ def main():
     pg.display.set_caption("たたかえ！こうかとん")
     screen = pg.display.set_mode((WIDTH, HEIGHT))
     clock = pg.time.Clock()
-    bg_img = pg.image.load("ProjExD2023/ex03-20230509/fig/pg_bg.jpg")
+    bg_img = pg.image.load("ex03-20230509/fig/pg_bg.jpg")
 
     bird = Bird(3, (900, 400))
     bombs = [Bomb() for i in range (NUM_OF_BOMBS)]
-    beam = None
+    beams = []
 
 
     tmr = 0
@@ -187,30 +216,34 @@ def main():
             if event.type == pg.QUIT:
                 return
             if event.type == pg.KEYDOWN and event.key == pg.K_SPACE :
-                beam = Beam(bird)
+                beams.append(Beam(bird))
         tmr += 1
         screen.blit(bg_img, [0, 0])
         
         for bomb in bombs:
             bomb.update(screen) # type: ignore
             if bird._rct.colliderect(bomb._rct): # type: ignore
-                # ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
                 bird.change_img(8, screen) # type: ignore
+                time.sleep(1)# ゲームオーバー時に，こうかとん画像を切り替え，1秒間表示させる
                 pg.display.update()
                 return
 
         key_lst = pg.key.get_pressed()
         bird.update(key_lst, screen) # type: ignore
         
-        if beam is not None:
-            beam.update(screen) # type: ignore
-            for i , bomb in enumerate(bombs):
-                if beam._rct.colliderect(bomb._rct):# type: ignore
-                    beam = None
-                    del bombs[i]
-                    bird.change_img(6, screen)# type: ignore
-                    time.sleep(0.1)# type: ignore
-                    break
+        if len(beams) is not 0:
+            for j , beam in enumerate(beams):
+                if beam is not None:
+                    beam.update(screen) # type: ignore
+                    if beam._rct.centerx > 1800:
+                        del beams[j]
+                    for i , bomb in enumerate(bombs):
+                        if beam._rct.colliderect(bomb._rct):# type: ignore
+                            del beams[j]
+                            del bombs[i]
+                            bird.change_img(6, screen)# type: ignore
+                            time.sleep(0.1)
+                            break
 
         pg.display.update()
         clock.tick(1000)
